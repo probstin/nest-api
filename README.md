@@ -1,73 +1,178 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Migrations & Seeders with TypeORM
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Migrations
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+### Pre-Requisites
 
-## Description
+This guide assumes that you already have a NestJS app up and running with TypeORM configured.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### 1) Install Required Dependencies
 
-## Installation
+- `@nestjs/typeorm` > `8.0.3`
+- `typeorm` > `0.2.45`
+- `typeorm-seeding` > latest version
+- `@ngneat/falso` > latest version
 
-```bash
-$ npm install
+### 2) Establish Configs
+
+You'll have to export an additional, static config for the TypeORM CLI to find when running migrations.
+
+```typescript
+// src/config/typeorm.config.ts
+
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { TypeOrmModuleAsyncOptions, TypeOrmModuleOptions } from "@nestjs/typeorm";
+
+export const typeOrmConfig: TypeOrmModuleOptions = {
+    type: 'mysql',
+    host: process.env.DB_HOST,
+    port: +process.env.DB_PORT,
+    username: process.env.DB_USERNAME,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    entities: [__dirname + '/../**/*.entity.{js,ts}'],
+    migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+    cli: { migrationsDir: __dirname + '/../database/migrations' },
+    extra: { charset: 'utf8mb4_unicode_ci' },
+    synchronize: false,
+    logging: true,
+};
+
+export const typeOrmAsyncConfig: TypeOrmModuleAsyncOptions = {
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: async (): Promise<TypeOrmModuleOptions> => ({
+        type: 'mysql',
+        host: process.env.DB_HOST,
+        port: +process.env.DB_PORT,
+        username: process.env.DB_USERNAME,
+        database: process.env.DB_NAME,
+        password: process.env.DB_PASSWORD,
+        entities: [__dirname + '/../**/*.entity.{js,ts}'],
+        migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+        cli: { migrationsDir: __dirname + '/../database/migrations' },
+        extra: { charset: 'utf8mb4_unicode_ci' },
+        synchronize: false,
+        logging: true,
+    }),
+};
 ```
 
-## Running the app
+```typescript
+// src/config/typeorm-migrations.config.ts
 
-```bash
-# development
-$ npm run start
+import { typeOrmConfig } from "./typeorm.config";
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+export = typeOrmConfig;
 ```
 
-## Test
+### 2) Add Scripts to `package.json`
 
-```bash
-# unit tests
-$ npm run test
+Wire in the scripts that actually interface with the TypeORM and TypeORM Seeding CLI.
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+**Be sure to double-check the path to your `typeorm-migrations.config.ts` file**
+```json
+{
+  "typeorm:cli": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli -f src/config/typeorm-migrations.config.ts",
+  "migration:generate": "npm run typeorm:cli -- migration:generate -d src/database/migrations -n",
+  "migration:create": "npm run typeorm:cli -- migration:create -d src/database/migrations -n",
+  "migration:run": "npm run typeorm:cli -- migration:run",
+  "migration:revert": "npm run typeorm:cli -- migration:revert",
+  "seed:config": "ts-node ./node_modules/typeorm-seeding/dist/cli.js config -n src/config/typeorm-migrations.config.ts",
+  "seed:run": "ts-node ./node_modules/typeorm-seeding/dist/cli.js seed -n src/config/typeorm-migrations.config.ts",
+  "db:refresh": "npm run typeorm:cli schema:drop && npm run migration:run && npm run seed:run"
+}
 ```
 
-## Support
+### 3) Create Some Entities
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```typescript
+// src/modules/settings/entities/setting.entity.ts
 
-## Stay in touch
+import { Column, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+@Entity('settings')
+export class Setting {
 
-## License
+    @PrimaryGeneratedColumn()
+    id: number;
 
-Nest is [MIT licensed](LICENSE).
+    @Column({ type: 'varchar' })
+    name: string;
+
+    @Column({ type: 'boolean', default: true })
+    isActive: boolean;
+
+    @UpdateDateColumn()
+    updatedOn: Date;
+
+}
+```
+
+### 4) Generate & Run the Migrations
+
+With Entities in your project, you can now generate migrations and have them auto-generated!
+
+`npm run migration:generate -- <NAME_YOUR_MIGRATION>`
+
+If you've followed the configuration above, your migration should land in `src/database/migrations/`
+
+With the migration generated, you can now run it against the database!
+
+`npm run migration:run`
+
+## Seeders
+
+### 1) Load your Configuration with TypeORM Seeding
+
+`npm run seed:config`
+
+### 2) Create Some Seeders
+
+Create a `src/database/seeds` directory that corresponds with the `seeds` directory returned from the command in `Seeders > 1`.
+
+Create a `settings.seed.ts` file:
+
+```typescript
+// src/database/seeds/settings.seed.ts
+
+import { Setting } from "../../modules/settings/entities/setting.entity"; // make sure this path stays relative
+import { Connection, getManager } from "typeorm";
+import { Factory, Seeder } from "typeorm-seeding";
+
+export class SettingsSeed implements Seeder {
+
+    public async run(factory: Factory, connection: Connection): Promise<void> {
+        await getManager().query('TRUNCATE settings');
+        await factory(Setting)().createMany(10);
+    }
+
+}
+```
+
+### 3) Create Some Factories
+
+Create a `src/database/factories` directory that corresponds with the `factories` directory returned from the command in `Seeders > 1`.
+
+Create a `settings.factory.ts` file:
+
+```typescript
+// src/database/factories/settings.factory.ts
+
+import { Setting } from "../../modules/settings/entities/setting.entity"; // make sure this path stays relative
+import { randBoolean, randDrinks } from "@ngneat/falso";
+import { define } from "typeorm-seeding";
+
+define(Setting, (): Setting => {
+    const setting = new Setting();
+    setting.name = randDrinks();
+    setting.isActive = randBoolean();
+    return setting;
+});
+```
+
+Check out Falso's documentation. They have a **TON** of other fun mock data.
+
+### 4) Run the Seeds!
+
+`npm run seed:run`
