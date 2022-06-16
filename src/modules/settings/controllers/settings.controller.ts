@@ -1,5 +1,6 @@
 import { Body, Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Put, Query } from "@nestjs/common";
 import { Observable } from "rxjs";
+import { SettingsQueryDto } from "../dtos/settings-query.dto";
 import { UpdateSettingDto } from "../dtos/update-setting.dto";
 import { Setting } from "../entities/setting.entity";
 import { SettingsService } from "../services/settings.service";
@@ -16,8 +17,8 @@ export class SettingsController {
     constructor(private settingsService: SettingsService) { }
 
     @Get('/')
-    getAllSettings(@Query('activeState', new DefaultValuePipe(ActiveState.ALL)) activeState: ActiveState = ActiveState.ALL): Observable<Setting[]> {
-        return this.settingsService.getAllSettings(activeState);
+    getAllSettings(@Query() queryParams: SettingsQueryDto): Observable<Setting[]> {
+        return this.settingsService.getAllSettings(queryParams);
     }
 
     @Get('/:id')

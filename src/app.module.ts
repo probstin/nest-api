@@ -5,12 +5,16 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { typeOrmAsyncConfig } from './config/typeorm.config';
 import { SettingsModule } from './modules/settings/settings.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync(typeOrmAsyncConfig),
-    SettingsModule
+    SettingsModule,
+    AuthModule,
+    UserModule
   ],
   controllers: [AppController],
   providers: [AppService],
