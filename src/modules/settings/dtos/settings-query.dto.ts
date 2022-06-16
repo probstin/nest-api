@@ -3,6 +3,7 @@ import { IsBoolean, IsEnum, IsOptional } from "class-validator";
 import { SettingType } from "../entities/setting.entity";
 
 export class SettingsQueryDto {
+
     @IsOptional()
     @IsBoolean()
     @Transform(({ value }) => convertToBoolean(value))
@@ -12,6 +13,7 @@ export class SettingsQueryDto {
     @IsEnum(SettingType)
     @Transform(({ value }) => SettingType[value])
     type?: SettingType;
+
 }
 
 const convertToBoolean = value => {

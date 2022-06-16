@@ -25,19 +25,14 @@ export class SettingsService {
     }
 
     private _generateQuery(queryParams: SettingsQueryDto) {
-
         if (queryParams && Object.keys(queryParams).length) {
-
             const { isActive, type } = queryParams;
 
             if (isActive !== undefined && type !== undefined) return { isActive, type };
-
             if (isActive !== undefined && type == undefined) return { isActive };
-
             if (isActive == undefined && type !== undefined) return { type };
-
         }
-
         return null;
     }
+
 }
