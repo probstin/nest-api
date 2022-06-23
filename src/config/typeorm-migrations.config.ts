@@ -1,3 +1,5 @@
-import { typeOrmConfig } from "./typeorm.config";
+import { config } from "./db.config";
 
-export = typeOrmConfig;
+console.log('#####', config.database);
+
+export = config;
